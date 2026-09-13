@@ -1,4 +1,4 @@
-# Automatic Modulation Recognition over Fading Channels
+# Deep Learning-Based Algorithms for Automatic Modulation Recognition over Severe Fading Channels
 
 This project studies deep learning for automatic modulation recognition over
 severe fading channels. The current public release contains the MATLAB dataset
