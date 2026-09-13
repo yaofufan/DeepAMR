@@ -1,0 +1,14 @@
+# Staged public release: only explicitly listed files are tracked.
+/*
+!/.gitignore
+!/README.md
+!/src/
+/src/*
+!/src/datsetgenarator_matlab/
+/src/datsetgenarator_matlab/*
+!/src/datsetgenarator_matlab/README.md
+!/src/datsetgenarator_matlab/amr_dataset_config.m
+!/src/datsetgenarator_matlab/generate_amr_dataset.m
+!/src/datsetgenarator_matlab/run_generate_dataset.m
+!/src/datsetgenarator_matlab/run_visualize_dataset.m
+!/src/datsetgenarator_matlab/visualize_amr_dataset.m
