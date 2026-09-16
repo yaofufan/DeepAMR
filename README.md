@@ -7,14 +7,14 @@ are not included in this release.
 
 ## Dataset Generator
 
-See [the generator documentation](src/datsetgenarator_matlab/README.md) for
+See [the generator documentation](src/dataset_generator_matlab/README.md) for
 MATLAB requirements, modulation and channel definitions, dataset format,
 and generation and visualization instructions.
 
 From the repository root, run in MATLAB:
 
 ```matlab
-cd src/datsetgenarator_matlab
+cd src/dataset_generator_matlab
 run_generate_dataset
 run_visualize_dataset
 ```

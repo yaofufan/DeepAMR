@@ -124,7 +124,7 @@ normalization scales signal and noise together, so it does not alter SNR.
 Run from MATLAB:
 
 ```matlab
-cd <project>/src/datsetgenarator_matlab
+cd <project>/src/dataset_generator_matlab
 run_generate_dataset
 ```
 
@@ -160,14 +160,14 @@ again to replace the incomplete file.
 After successful generation:
 
 ```matlab
-cd <project>/src/datsetgenarator_matlab
+cd <project>/src/dataset_generator_matlab
 run_visualize_dataset
 ```
 
 Figures are written to:
 
 ```text
-<project>/src/datsetgenarator_matlab/runs/matlab_dataset_viz
+<project>/src/dataset_generator_matlab/runs/matlab_dataset_viz
 ```
 
 One PNG is created for every channel:
