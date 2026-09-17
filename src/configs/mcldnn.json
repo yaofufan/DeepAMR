@@ -1,0 +1,79 @@
+{
+  "data": {
+    "dataset": "matlab",
+    "path": "../datasets/matlab_amr_dataset.mat",
+    "mat_x_key": "X",
+    "mat_y_key": "y",
+    "mat_snr_key": "snr",
+    "mat_channel_key": "channel",
+    "mat_split_key": "split",
+    "input_length": 512,
+    "batch_size": 1024,
+    "num_workers": 4,
+    "prefetch_factor": 2,
+    "persistent_workers": true,
+    "hdf5_block_size": 64,
+    "normalize": "rms",
+    "train_fraction": 0.6,
+    "val_fraction": 0.2,
+    "test_fraction": 0.2,
+    "seed": 42,
+    "class_names": [
+      "BPSK",
+      "QPSK",
+      "8PSK",
+      "2FSK",
+      "4FSK",
+      "CPFSK",
+      "GFSK",
+      "PAM4",
+      "QAM16",
+      "QAM64",
+      "QAM256",
+      "AM-DSB",
+      "AM-SSB",
+      "WBFM",
+      "LFM"
+    ],
+    "channel_names": [
+      "AWGN",
+      "Rayleigh",
+      "Rician",
+      "Nakagami",
+      "DoublySelective",
+      "FrequencySelectiveRayleigh",
+      "FrequencySelectiveRician",
+      "LognormalShadowing",
+      "3GPP_TDL_A",
+      "3GPP_TDL_C",
+      "3GPP_TDL_E"
+    ]
+  },
+  "model": {
+    "name": "mcldnn",
+    "num_classes": 15,
+    "input_channels": 2,
+    "input_length": 512,
+    "hidden_channels": 50,
+    "dropout": 0.5,
+    "extra": {
+      "lstm_hidden": 128,
+      "fc_channels": 128
+    }
+  },
+  "train": {
+    "epochs": 100,
+    "lr": 0.001,
+    "min_lr": 0.00001,
+    "weight_decay": 0.0001,
+    "device": "auto",
+    "output_dir": "runs/mcldnn",
+    "early_stop_patience": 15,
+    "grad_clip_norm": 5,
+    "amp": true,
+    "scheduler": "plateau",
+    "scheduler_patience": 5,
+    "scheduler_factor": 0.5,
+    "log_interval": 100
+  }
+}

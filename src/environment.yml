@@ -1,0 +1,15 @@
+# Core versions from the working Windows RTX 5060 Laptop GPU environment.
+# CUDA 12.8 wheel; validate GPU execution separately on other machines.
+name: ee6008-amr
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10.20
+  - pip=26.1.2
+  - numpy=2.2.6
+  - scipy=1.15.3
+  - h5py=3.16.0
+  - pyyaml=6.0.3
+  - pip:
+      - --index-url=https://download.pytorch.org/whl/cu128
+      - torch==2.11.0+cu128

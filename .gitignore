@@ -1,14 +1,32 @@
-# Staged public release: only explicitly listed files are tracked.
+# Public repository scope
 /*
 !/.gitignore
 !/README.md
+!/LICENSE
 !/src/
-/src/*
-!/src/dataset_generator_matlab/
-/src/dataset_generator_matlab/*
-!/src/dataset_generator_matlab/README.md
-!/src/dataset_generator_matlab/amr_dataset_config.m
-!/src/dataset_generator_matlab/generate_amr_dataset.m
-!/src/dataset_generator_matlab/run_generate_dataset.m
-!/src/dataset_generator_matlab/run_visualize_dataset.m
-!/src/dataset_generator_matlab/visualize_amr_dataset.m
+!/datasets/
+!/ref/
+
+# Large datasets are distributed separately.
+/datasets/*
+!/datasets/README.md
+
+# Keep the bibliography, not local copies of publisher PDFs.
+/ref/*
+!/ref/README.md
+
+# Experiment and visualization outputs
+/src/runs/
+/src/dataset_generator_matlab/runs/
+/src/result_plotting_matlab/figures/
+
+# Local editor and Python artifacts
+/src/.vscode/
+**/__pycache__/
+*.py[cod]
+
+# MATLAB and operating-system artifacts
+*.asv
+*.m~
+.DS_Store
+Thumbs.db
