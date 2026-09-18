@@ -9,7 +9,12 @@ The formal project dataset is stored as a MATLAB v7.3/HDF5 file containing I/Q
 signals, modulation labels, SNR values, channel labels, and predefined
 train/validation/test splits.
 
-**Download link: coming soon.**
+Download the dataset from the shared Google Drive folder:
+
+- [Google Drive - MATLAB AMR Dataset](https://drive.google.com/drive/folders/13ni3EhD0toR7zA0D2i1iJit5bEL0YuD0?usp=sharing)
+
+Download `matlab_amr_dataset.mat` from the folder and keep the file name
+unchanged.
 
 After downloading, place the file at:
 
@@ -22,8 +27,7 @@ variable interface is documented in [`src/README.md`](../src/README.md), while
 the generation procedure and complete dataset specification are documented in
 [`src/dataset_generator_matlab/README.md`](../src/dataset_generator_matlab/README.md).
 
-The download link, mirror information, and SHA-256 checksum will be added here
-after the dataset has been uploaded to cloud storage.
+Additional mirrors or checksum information can be added here when available.
 
 ## RadioML
 

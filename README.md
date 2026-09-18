@@ -63,10 +63,11 @@ See [result plotting documentation](src/result_plotting_matlab/README.md).
 
 ## Dataset
 
-The generated dataset is not stored in this Git repository. Download
-instructions and the cloud-storage link will be published in
-[`datasets/README.md`](datasets/README.md). After downloading, the expected
-layout is:
+The generated dataset is not stored in this Git repository. It can be
+downloaded from the
+[shared Google Drive folder](https://drive.google.com/drive/folders/13ni3EhD0toR7zA0D2i1iJit5bEL0YuD0?usp=sharing).
+See [`datasets/README.md`](datasets/README.md) for the download and placement
+instructions. After downloading, the expected layout is:
 
 ```text
 EE6008/
