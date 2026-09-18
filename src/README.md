@@ -112,9 +112,11 @@ The official MCLDNN implementation uses TensorFlow/Keras; this repository
 reimplements the architecture in PyTorch for a unified comparison framework.
 
 Both models use the same data split and training protocol for a controlled
-comparison. The committed configs use AdamW, cross-entropy loss,
-`ReduceLROnPlateau`, mixed precision, a maximum of 100 epochs, and early
-stopping with patience 15.
+comparison. Following the protocol in arXiv:2606.09085v1, the committed configs
+use per-sample L2 normalization, cross-entropy, AdamW with learning rate 0.001
+and weight decay 0.01, and `ReduceLROnPlateau` with patience 5 and factor 0.5.
+Training uses mixed precision, batch size 512 for the `2 x 512` project signals,
+a maximum of 100 epochs, and early stopping with patience 15.
 
 ## Training
 

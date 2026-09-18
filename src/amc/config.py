@@ -32,12 +32,12 @@ class DataConfig:
     train_fraction: float = 0.6
     val_fraction: float = 0.2
     test_fraction: float = 0.2
-    batch_size: int = 1024
+    batch_size: int = 512
     num_workers: int = 0
     prefetch_factor: int = 2
     persistent_workers: bool = True
     hdf5_block_size: int = 64
-    normalize: str = "rms"
+    normalize: str = "l2"
     seed: int = 42
 
 
@@ -57,7 +57,7 @@ class TrainConfig:
     epochs: int = 100
     lr: float = 1e-3
     min_lr: float = 1e-5
-    weight_decay: float = 1e-4
+    weight_decay: float = 1e-2
     device: str = "auto"
     output_dir: str = "runs/default"
     early_stop_patience: int = 15

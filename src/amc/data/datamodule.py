@@ -21,7 +21,7 @@ class SignalDataset(Dataset):
         y: np.ndarray,
         snr: Optional[np.ndarray] = None,
         channel: Optional[np.ndarray] = None,
-        normalize: str = "rms",
+        normalize: str = "l2",
     ) -> None:
         self.x = self._normalize(x, normalize)
         self.y = y.astype(np.int64)
@@ -37,6 +37,9 @@ class SignalDataset(Dataset):
         x = x.astype(np.float32, copy=False)
         if mode == "none":
             return x
+        if mode == "l2":
+            norm = np.sqrt(np.sum(x * x, axis=(1, 2), keepdims=True))
+            return x / np.maximum(norm, 1e-8)
         if mode == "rms":
             rms = np.sqrt(np.mean(x * x, axis=(1, 2), keepdims=True) + 1e-8)
             return x / rms
@@ -68,7 +71,7 @@ class H5MatSignalDataset(Dataset):
         y: np.ndarray,
         snr: np.ndarray,
         channel: np.ndarray,
-        normalize: str = "rms",
+        normalize: str = "l2",
     ) -> None:
         self.path = path
         self.x_key = x_key
@@ -185,6 +188,9 @@ class H5MatSignalDataset(Dataset):
     def _normalize(self, x: np.ndarray) -> np.ndarray:
         if self.normalize == "none":
             return x
+        if self.normalize == "l2":
+            norm = np.sqrt(np.sum(x * x))
+            return x / max(float(norm), 1e-8)
         if self.normalize == "rms":
             return x / np.sqrt(np.mean(x * x) + 1e-8)
         if self.normalize == "zscore":
@@ -195,6 +201,9 @@ class H5MatSignalDataset(Dataset):
         x = x.astype(np.float32, copy=False)
         if self.normalize == "none":
             return x
+        if self.normalize == "l2":
+            norm = np.sqrt(np.sum(x * x, axis=(1, 2), keepdims=True))
+            return x / np.maximum(norm, 1e-8)
         if self.normalize == "rms":
             rms = np.sqrt(np.mean(x * x, axis=(1, 2), keepdims=True) + 1e-8)
             return x / rms
