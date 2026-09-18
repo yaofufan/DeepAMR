@@ -20,7 +20,8 @@ src/
 |   |-- models/               # O'Shea ResNet, MCLDNN, and model factory
 |   |-- training/             # Training loop and checkpoint utilities
 |   |-- train.py              # Training entry point
-|   `-- evaluate.py           # Evaluation and raw-result export
+|   |-- evaluate.py           # Evaluation and raw-result export
+|   `-- benchmark.py          # Accuracy, Params, MACs, and latency summary
 |-- configs/                  # Reproducible experiment configurations
 |-- dataset_generator_matlab/ # MATLAB dataset generation and visualization
 |-- result_plotting_matlab/   # MATLAB result plotting
@@ -178,6 +179,28 @@ Evaluation exports numeric data only:
 Use `--split val` to evaluate the validation split,
 `--feature-snr <value>` to change the exported feature SNR, or
 `--skip-feature-export` to skip feature collection.
+
+## Model Benchmark
+
+Keep complexity and hardware benchmarking separate from dataset evaluation.
+After `evaluate.py` has produced `metrics.json`, summarize the ResNet results:
+
+```bash
+python -m amc.benchmark --config configs/resnet.json --checkpoint runs/oshea_resnet/best.pt --metrics runs/eval_oshea_resnet/metrics.json --output runs/eval_oshea_resnet/benchmark.json
+```
+
+The command writes `benchmark.json` with full metadata and `benchmark.csv`
+with the paper-table columns `ave_acc_pct`, `max_acc_pct`, `params_k`,
+`macs_m`, and `latency_ms`. `Ave. Acc.` is the sample-weighted test accuracy
+from `metrics.json`; `Max. Acc.` is the highest per-SNR test accuracy. Latency
+defaults to batch size 1, FP32, 50 warm-up iterations, and 200 measured
+iterations on the configured device. Because latency is hardware-dependent,
+the JSON also records the device, precision, batch size, and repetition count.
+MACs are always reported for one input sample; one MAC denotes one
+multiply-accumulate operation (often approximated as two FLOPs).
+
+Use `--amp` for CUDA mixed-precision latency or change `--batch-size`,
+`--warmup`, and `--repetitions` explicitly when reporting another protocol.
 
 ## MATLAB Result Plotting
 
