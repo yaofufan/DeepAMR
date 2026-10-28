@@ -472,3 +472,58 @@ def _make_bundle(
         class_names,
         metadata.get("channel_names", ["unknown"]),
     )
+
+
+def filter_dataloader_by_snr(
+    loader: DataLoader,
+    snr_value: int,
+    config: DataConfig,
+    shuffle: bool,
+) -> DataLoader:
+    """Rebuild a loader using only samples at one SNR level."""
+    source = loader.dataset
+    if isinstance(source, Subset):
+        dataset = source.dataset
+        candidate_indices = np.asarray(source.indices, dtype=np.int64)
+    else:
+        dataset = source
+        sampler = loader.batch_sampler
+        if not isinstance(sampler, H5BlockBatchSampler):
+            raise TypeError("Unsupported loader type for SNR filtering.")
+        candidate_indices = np.concatenate(sampler.blocks)
+
+    if not hasattr(dataset, "snr"):
+        raise ValueError("The dataset does not expose SNR metadata.")
+    selected = candidate_indices[np.asarray(dataset.snr)[candidate_indices] == snr_value]
+    if selected.size == 0:
+        raise ValueError(f"No samples at SNR {snr_value}dB in this data split.")
+
+    loader_kwargs: Dict[str, object] = {
+        "num_workers": config.num_workers,
+        "pin_memory": torch.cuda.is_available(),
+    }
+    if config.num_workers > 0:
+        loader_kwargs.update(
+            {
+                "persistent_workers": config.persistent_workers,
+                "prefetch_factor": config.prefetch_factor,
+            }
+        )
+    if isinstance(dataset, H5MatSignalDataset):
+        return DataLoader(
+            dataset,
+            batch_sampler=H5BlockBatchSampler(
+                selected,
+                config.batch_size,
+                config.hdf5_block_size,
+                shuffle=shuffle,
+                seed=config.seed,
+            ),
+            **loader_kwargs,
+        )
+    return DataLoader(
+        Subset(dataset, selected.tolist()),
+        batch_size=config.batch_size,
+        shuffle=shuffle,
+        **loader_kwargs,
+    )

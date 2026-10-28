@@ -66,9 +66,19 @@ class TrainConfig:
     scheduler: str = "plateau"
     scheduler_patience: int = 5
     scheduler_factor: float = 0.5
+    warmup_epochs: int = 0
+    warmup_start_factor: float = 0.1
     log_interval: int = 50
     accumulation_steps: int = 1
     seed: Optional[int] = None
+    protocol: str = "standard"
+    stages: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    optimizer: str = "adamw"
+    scheduler_step_size: int = 10
+    scheduler_gamma: float = 0.9
+    snr_weighting: bool = False
+    snr_weight_m: float = 0.3
+    snr_weight_j: float = 6.0
 
 
 @dataclass
@@ -127,9 +137,31 @@ def config_from_dict(raw: Dict[str, Any]) -> ExperimentConfig:
     if data.pop("train_sampler", "blocks") != "blocks":
         raise ValueError("Only the baseline data sampler is supported.")
     data.pop("pair_block_size", None)
+    model = dict(merged["model"])
+    extra = dict(model.get("extra", {}))
+    # Earlier Full checkpoints used a different registry name and redundant
+    # enabled-condition flags. Normalize only that complete dense architecture;
+    # partial conditions and active experts remain unsupported by the Full model.
+    if (model["name"].lower().startswith("saftformer")
+            and extra.get("enable_temporal_condition") is True
+            and extra.get("enable_frequency_condition") is True
+            and extra.get("enable_icsa", True) is True
+            and extra.get("enable_moe", False) is False):
+        model["name"] = "vit_splus_1d"
+        extra.pop("enable_temporal_condition")
+        extra.pop("enable_frequency_condition")
+    # Older dense SAFTFormer checkpoints included disabled MoE settings. They
+    # never affected that model and should not invalidate a training resume
+    # after the abandoned experiment settings are removed from current JSONs.
+    # Active MoE settings are retained so model construction rejects them.
+    if (model["name"].lower() == "vit_splus_1d"
+            and extra.get("enable_moe") is False):
+        extra.pop("enable_moe")
+        extra = {key: value for key, value in extra.items() if not key.startswith("moe_")}
+    model["extra"] = extra
     return ExperimentConfig(
         data=DataConfig(**data),
-        model=ModelConfig(**merged["model"]),
+        model=ModelConfig(**model),
         train=TrainConfig(**merged["train"]),
     )
 

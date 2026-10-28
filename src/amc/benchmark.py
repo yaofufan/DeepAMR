@@ -22,6 +22,9 @@ if __package__ in {None, ""}:
 
 from amc.config import ExperimentConfig, load_config, resolve_src_path
 from amc.models import build_model
+from amc.models.ours_saftformer.vit_splus_1d import KeyMaskedLinear, RotaryAttention
+from amc.models.baselines.amcnet import FeaFusionModule
+from amc.models.baselines.tldnn import TalkingHeadsAttention
 from amc.training.checkpoint import load_checkpoint
 from amc.training.engine import resolve_device
 
@@ -30,15 +33,18 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Compute accuracy summary, parameters, MACs, and latency."
     )
-    parser.add_argument("--config", default=str(ROOT / "configs" / "resnet.json"))
+    parser.add_argument("--config", default=str(ROOT / "configs" / "ours_saftformer" / "full.json"))
     parser.add_argument(
-        "--checkpoint", default=str(ROOT / "runs" / "oshea_resnet" / "best.pt")
+        "--checkpoint", default=None,
+        help="Defaults to best.pt in the selected config's training output directory.",
     )
     parser.add_argument(
-        "--metrics", default=str(ROOT / "runs" / "eval_oshea_resnet" / "metrics.json")
+        "--metrics", default=None,
+        help="Defaults to metrics.json in the evaluation directory for the selected config.",
     )
     parser.add_argument(
-        "--output", default=str(ROOT / "runs" / "eval_oshea_resnet" / "benchmark.json")
+        "--output", default=None,
+        help="Defaults to benchmark.json in the evaluation directory for the selected config.",
     )
     parser.add_argument(
         "--device",
@@ -51,7 +57,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--amp", action="store_true", help="Measure CUDA latency with autocast FP16."
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.checkpoint is None or args.metrics is None or args.output is None:
+        training_dir = resolve_src_path(load_config(args.config).train.output_dir)
+        evaluation_dir = training_dir.parent / f"eval_{training_dir.name}"
+        if args.checkpoint is None:
+            args.checkpoint = str(training_dir / "best.pt")
+        if args.metrics is None:
+            args.metrics = str(evaluation_dir / "metrics.json")
+        if args.output is None:
+            args.output = str(evaluation_dir / "benchmark.json")
+    return args
 
 
 def load_trained_model(config: ExperimentConfig, checkpoint_path: Path):
@@ -90,6 +106,7 @@ def summarize_accuracy(metrics_path: Path) -> dict[str, Any]:
 
 
 def count_macs(model: torch.nn.Module, input_shape: tuple[int, int, int]) -> float:
+    """Count THOP layer costs plus extra matmuls; FFT remains excluded."""
     try:
         from thop import profile
     except ImportError as exc:
@@ -99,9 +116,61 @@ def count_macs(model: torch.nn.Module, input_shape: tuple[int, int, int]) -> flo
 
     profile_model = copy.deepcopy(model).cpu().eval()
     sample = torch.zeros(input_shape, dtype=torch.float32)
-    with torch.inference_mode():
-        macs, _ = profile(profile_model, inputs=(sample,), verbose=False)
-    return float(macs)
+    attention_macs = 0
+
+    def count_attention(_module, inputs, _output):
+        nonlocal attention_macs
+        batch, tokens, dim = inputs[0].shape
+        # QK^T and attention-times-V; QKV/projection Linear layers are counted by THOP.
+        attention_macs += 2 * batch * tokens * tokens * dim
+
+    def count_masked_linear(module, inputs, _output):
+        # Key masking changes the bias only; this is a normal dense projection.
+        module.total_ops += inputs[0].numel() * module.out_features
+
+    def count_multihead_attention(module, inputs, _output):
+        query, key, value = inputs[:3]
+        if module.batch_first:
+            batch, queries, query_dim = query.shape
+            keys, key_dim, value_dim = key.shape[1], key.shape[2], value.shape[2]
+        else:
+            queries, batch, query_dim = query.shape
+            keys, key_dim, value_dim = key.shape[0], key.shape[2], value.shape[2]
+        dim = module.embed_dim
+        # Functional Q/K/V projections bypass Linear hooks. Include the output
+        # projection here as well, since this whole module has one THOP rule.
+        projections = batch * dim * (queries * query_dim + keys * key_dim
+                                      + keys * value_dim + queries * dim)
+        products = 2 * batch * queries * keys * dim
+        module.total_ops += projections + products
+
+    def count_explicit_attention(module, inputs, _output):
+        nonlocal attention_macs
+        batch, tokens, _ = inputs[0].shape
+        dim = (module.num_heads * module.head_size if isinstance(module, FeaFusionModule)
+               else module.heads * module.dim_head)
+        # QKV/outputs and talking-head mixing convolutions remain THOP-counted.
+        attention_macs += 2 * batch * tokens * tokens * dim
+
+    hooks = [module.register_forward_hook(count_attention)
+             for module in profile_model.modules()
+             if isinstance(module, RotaryAttention)]
+    hooks.extend(module.register_forward_hook(count_explicit_attention)
+                 for module in profile_model.modules()
+                 if isinstance(module, (FeaFusionModule, TalkingHeadsAttention)))
+    fastpath = torch.backends.mha.get_fastpath_enabled()
+    # TransformerEncoder's fused evaluation path bypasses module hooks.
+    torch.backends.mha.set_fastpath_enabled(False)
+    try:
+        with torch.inference_mode():
+            macs, _ = profile(profile_model, inputs=(sample,), verbose=False,
+                              custom_ops={KeyMaskedLinear: count_masked_linear,
+                                          torch.nn.MultiheadAttention: count_multihead_attention})
+    finally:
+        torch.backends.mha.set_fastpath_enabled(fastpath)
+        for hook in hooks:
+            hook.remove()
+    return float(macs + attention_macs)
 
 
 def measure_latency(
@@ -205,6 +274,8 @@ def main() -> None:
     )
     results = {
         "model": config.model.name,
+        "model_display_name": getattr(model, "model_name", config.model.name),
+        "model_full_name": getattr(model, "model_full_name", config.model.name),
         "average_accuracy": accuracy["average_accuracy"],
         "average_accuracy_pct": 100.0 * accuracy["average_accuracy"],
         "mean_snr_accuracy": accuracy["mean_snr_accuracy"],
@@ -219,6 +290,12 @@ def main() -> None:
         "params_k": total_params / 1_000.0,
         "macs": macs,
         "macs_m": macs / 1_000_000.0,
+        "macs_excluded_ops": ["functional normalization (THOP-counted layers included)",
+                              "softmax", "activations", "pooling reductions",
+                              "elementwise gating"] +
+                             (["FFT", "spectral power and log"]
+                              if (getattr(model, "spectral_conditioner", None) is not None
+                                  or getattr(model, "acm", None) is not None) else []),
         "latency_ms": latency_per_batch,
         "latency_per_sample_ms": latency_per_batch / args.batch_size,
         "batch_latency_ms": latency_per_batch,

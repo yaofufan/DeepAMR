@@ -22,7 +22,7 @@ After downloading, place the file at:
 <project-root>/datasets/matlab_amr_dataset.mat
 ```
 
-Both baseline configurations already point to this location. The expected
+The provided model configurations point to this location. The expected
 variable interface is documented in [`src/README.md`](../src/README.md), while
 the generation procedure and complete dataset specification are documented in
 [`src/dataset_generator_matlab/README.md`](../src/dataset_generator_matlab/README.md).

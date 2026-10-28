@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import sys
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
+import torch
 from scipy.io import savemat
 from torch import nn
 
@@ -27,17 +31,35 @@ from amc.training.engine import evaluate, resolve_device
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default=str(ROOT / "configs" / "resnet.json"))
-    parser.add_argument("--checkpoint", default=str(ROOT / "runs" / "oshea_resnet" / "best.pt"))
+    parser.add_argument("--config", default=str(ROOT / "configs" / "ours_saftformer" / "full.json"))
+    parser.add_argument("--checkpoint", default=None,
+                        help="Checkpoint to evaluate; defaults to best.pt in the selected config's training output directory.")
     parser.add_argument("--split", choices=["val", "test"], default="test")
-    parser.add_argument("--output-dir", default="runs/eval_oshea_resnet")
+    parser.add_argument("--output-dir", default=None,
+                        help="Evaluation directory; defaults to eval_<training directory> beside the selected config's training output.")
     parser.add_argument("--feature-snr", type=int, default=0)
     parser.add_argument("--feature-samples-per-class", type=int, default=300)
     parser.add_argument("--skip-feature-export", action="store_true")
-    return parser.parse_args()
+    parser.add_argument(
+        "--num-workers", type=int, default=None,
+        help="Override evaluation loader workers without changing the saved config; 0 disables multiprocessing.",
+    )
+    args = parser.parse_args()
+    if args.num_workers is not None and args.num_workers < 0:
+        parser.error("--num-workers must be non-negative.")
+    if args.checkpoint is None or args.output_dir is None:
+        training_dir = Path(load_config(args.config).train.output_dir)
+        if args.checkpoint is None:
+            args.checkpoint = str(resolve_src_path(training_dir) / "best.pt")
+        if args.output_dir is None:
+            args.output_dir = (training_dir.parent / f"eval_{training_dir.name}").as_posix()
+    return args
 
 
-def final_linear(model: nn.Module) -> nn.Linear:
+def final_linear(model: nn.Module) -> nn.Module:
+    feature_layer = getattr(model, "feature_layer", None)
+    if isinstance(feature_layer, nn.Module):
+        return feature_layer
     search_root = model.classifier if hasattr(model, "classifier") else model
     layers = [layer for layer in search_root.modules() if isinstance(layer, nn.Linear)]
     if not layers:
@@ -160,6 +182,8 @@ def write_csv_results(
 def main() -> None:
     args = parse_args()
     config: ExperimentConfig = load_config(args.config)
+    if args.num_workers is not None:
+        config.data.num_workers = args.num_workers
     bundle = build_dataloaders(config.data)
     config.model.num_classes = len(bundle.class_names)
     config.model.input_length = config.data.input_length
@@ -167,8 +191,13 @@ def main() -> None:
     checkpoint_path = resolve_src_path(args.checkpoint)
     ckpt = load_checkpoint(str(checkpoint_path), map_location="cpu")
     model.load_state_dict(ckpt["model"])
+    checkpoint_hash = hashlib.sha256()
+    with checkpoint_path.open("rb") as checkpoint_file:
+        for block in iter(lambda: checkpoint_file.read(1024 * 1024), b""):
+            checkpoint_hash.update(block)
     device = resolve_device(config.train.device)
     feature_layer = None if args.skip_feature_export else final_linear(model)
+    evaluation_start = time.perf_counter()
     metrics = evaluate(
         model.to(device),
         getattr(bundle, args.split),
@@ -181,6 +210,7 @@ def main() -> None:
         feature_snr=args.feature_snr,
         export_predictions=True,
     )
+    elapsed_seconds = time.perf_counter() - evaluation_start
 
     output_dir = resolve_src_path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -196,6 +226,9 @@ def main() -> None:
         for key, value in metrics.items()
     }
     serializable["split"] = args.split
+    serializable["model"] = config.model.name
+    serializable["model_display_name"] = getattr(model, "model_name", config.model.name)
+    serializable["model_full_name"] = getattr(model, "model_full_name", config.model.name)
     serializable["class_names"] = bundle.class_names
     serializable["channel_names"] = bundle.channel_names
     (output_dir / "metrics.json").write_text(json.dumps(serializable, indent=2), encoding="utf-8")
@@ -218,6 +251,25 @@ def main() -> None:
             config.data.seed,
         )
         print(f"Saved t-SNE source features to {feature_path.resolve()}")
+    provenance = {
+        "config_file": str(Path(args.config).resolve()),
+        "checkpoint_file": str(checkpoint_path.resolve()),
+        "checkpoint_sha256": checkpoint_hash.hexdigest(),
+        "checkpoint_epoch": ckpt.get("epoch"),
+        "checkpoint_selection": checkpoint_path.name,
+        "split": args.split,
+        "num_workers_override": args.num_workers,
+        "precision": "float32",
+        "device": torch.cuda.get_device_name(device) if device.type == "cuda" else "CPU",
+        "evaluated_samples": len(predictions["y_true"]),
+        "test_samples": len(predictions["y_true"]) if args.split == "test" else 0,
+        "model": config.model.name,
+        "elapsed_seconds": elapsed_seconds,
+        "completed_utc": datetime.now(timezone.utc).isoformat(),
+    }
+    (output_dir / "evaluation_provenance.json").write_text(
+        json.dumps(provenance, indent=2), encoding="utf-8"
+    )
     summary = {
         "accuracy": serializable["accuracy"],
         "macro_f1": serializable["macro_f1"],

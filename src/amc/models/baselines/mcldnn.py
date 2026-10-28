@@ -1,7 +1,17 @@
-"""PyTorch implementation of Xu et al.'s MCLDNN (IEEE WCL, 2020).
+"""PyTorch reproduction of MCLDNN for automatic modulation recognition.
 
-Architecture reference: https://github.com/wzjialang/MCLDNN/blob/master/MCLDNN.py
-Accepts [N, 2, L] I/Q tensors and returns unnormalized class logits.
+Reference:
+    J. Xu, C. Luo, G. Parr, and Y. Luo, "A Spatiotemporal Multi-Channel
+    Learning Framework for Automatic Modulation Recognition," IEEE WCL, 2020.
+    DOI: https://doi.org/10.1109/LWC.2020.2999453
+    Code: https://github.com/wzjialang/MCLDNN
+
+Implementation:
+    Project PyTorch reproduction of the original TensorFlow/Keras model.
+
+Input: I/Q tensors with shape [N, 2, L].
+Output: Unnormalized class logits with shape [N, num_classes].
+Note: Multi-channel convolutional features followed by LSTM processing.
 """
 
 import torch

@@ -1,0 +1,94 @@
+{
+  "data": {
+    "dataset": "matlab",
+    "path": "../datasets/matlab_amr_dataset.mat",
+    "mat_x_key": "X",
+    "mat_y_key": "y",
+    "mat_snr_key": "snr",
+    "mat_channel_key": "channel",
+    "mat_split_key": "split",
+    "input_length": 512,
+    "batch_size": 512,
+    "num_workers": 4,
+    "prefetch_factor": 2,
+    "persistent_workers": true,
+    "hdf5_block_size": 64,
+    "normalize": "none",
+    "train_fraction": 0.6,
+    "val_fraction": 0.2,
+    "test_fraction": 0.2,
+    "seed": 42,
+    "class_names": [
+      "BPSK", "QPSK", "8PSK", "2FSK", "4FSK", "CPFSK", "GFSK", "PAM4",
+      "QAM16", "QAM64", "QAM256", "AM-DSB", "AM-SSB", "WBFM", "LFM"
+    ],
+    "channel_names": [
+      "AWGN", "Rayleigh", "Rician", "Nakagami", "DoublySelective",
+      "FrequencySelectiveRayleigh", "FrequencySelectiveRician",
+      "LognormalShadowing", "3GPP_TDL_A", "3GPP_TDL_C", "3GPP_TDL_E"
+    ]
+  },
+  "model": {
+    "name": "se_tfa",
+    "num_classes": 15,
+    "input_channels": 2,
+    "input_length": 512,
+    "hidden_channels": 48,
+    "dropout": 0.0,
+    "extra": {
+      "spectrogram_size": 100,
+      "frame_length": 40,
+      "frame_shift": 2,
+      "fft_size": 128,
+      "ma_window": 9,
+      "gaussian_sigma": 1.0,
+      "gaussian_radius": 7,
+      "attention_reduction": 4,
+      "fc_channels": 128
+    }
+  },
+  "train": {
+    "epochs": 200,
+    "lr": 0.00001,
+    "min_lr": 0.0,
+    "weight_decay": 0.0,
+    "device": "auto",
+    "output_dir": "runs/se_tfa",
+    "early_stop_patience": 25,
+    "grad_clip_norm": null,
+    "amp": false,
+    "scheduler": "none",
+    "scheduler_patience": 15,
+    "scheduler_factor": 0.1,
+    "log_interval": 100,
+    "protocol": "se_tfa_paper",
+    "stages": {
+      "classifier_pretrain": {
+        "max_epochs": 200,
+        "optimizer": "rmsprop",
+        "lr": 0.0005,
+        "scheduler": "plateau",
+        "scheduler_patience": 15,
+        "scheduler_factor": 0.1,
+        "early_stop_patience": 25,
+        "snr": 18
+      },
+      "enhancement": {
+        "max_epochs": 200,
+        "optimizer": "adam",
+        "lr": 0.001,
+        "scheduler": "plateau",
+        "scheduler_patience": 15,
+        "scheduler_factor": 0.1,
+        "early_stop_patience": 25
+      },
+      "joint_finetune": {
+        "max_epochs": 200,
+        "optimizer": "adam",
+        "lr": 0.00001,
+        "scheduler": "none",
+        "early_stop_patience": 15
+      }
+    }
+  }
+}

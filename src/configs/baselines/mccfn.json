@@ -1,0 +1,88 @@
+{
+  "data": {
+    "dataset": "matlab",
+    "path": "../datasets/matlab_amr_dataset.mat",
+    "mat_x_key": "X",
+    "mat_y_key": "y",
+    "mat_snr_key": "snr",
+    "mat_channel_key": "channel",
+    "mat_split_key": "split",
+    "input_length": 512,
+    "class_names": [
+      "BPSK",
+      "QPSK",
+      "8PSK",
+      "2FSK",
+      "4FSK",
+      "CPFSK",
+      "GFSK",
+      "PAM4",
+      "QAM16",
+      "QAM64",
+      "QAM256",
+      "AM-DSB",
+      "AM-SSB",
+      "WBFM",
+      "LFM"
+    ],
+    "channel_names": [
+      "AWGN",
+      "Rayleigh",
+      "Rician",
+      "Nakagami",
+      "DoublySelective",
+      "FrequencySelectiveRayleigh",
+      "FrequencySelectiveRician",
+      "LognormalShadowing",
+      "3GPP_TDL_A",
+      "3GPP_TDL_C",
+      "3GPP_TDL_E"
+    ],
+    "train_fraction": 0.6,
+    "val_fraction": 0.2,
+    "test_fraction": 0.2,
+    "batch_size": 16,
+    "num_workers": 4,
+    "prefetch_factor": 2,
+    "persistent_workers": true,
+    "hdf5_block_size": 64,
+    "normalize": "l2",
+    "seed": 42
+  },
+  "model": {
+    "name": "mccfn",
+    "num_classes": 15,
+    "input_channels": 2,
+    "input_length": 512,
+    "hidden_channels": 36,
+    "dropout": 0.0,
+    "extra": {
+      "latent_dim": 512,
+      "num_heads": 2,
+      "extend_channel": 36,
+      "conv_chan_list": [
+        36,
+        64,
+        128,
+        256
+      ]
+    }
+  },
+  "train": {
+    "epochs": 100,
+    "lr": 0.0001,
+    "min_lr": 1e-06,
+    "weight_decay": 0.0,
+    "device": "auto",
+    "output_dir": "runs/mccfn",
+    "early_stop_patience": 15,
+    "grad_clip_norm": 1.0,
+    "amp": true,
+    "scheduler": "plateau",
+    "scheduler_patience": 2,
+    "scheduler_factor": 0.5,
+    "log_interval": 50,
+    "accumulation_steps": 1,
+    "seed": null
+  }
+}

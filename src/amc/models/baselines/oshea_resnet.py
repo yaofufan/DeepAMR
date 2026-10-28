@@ -1,7 +1,16 @@
-"""Residual network from O'Shea et al., IEEE JSTSP, 2018.
+"""PyTorch reproduction of O'Shea ResNet for automatic modulation recognition.
 
-Over-the-Air Deep Learning Based Radio Signal Classification.
-DOI: https://doi.org/10.1109/JSTSP.2018.2797022
+Reference:
+    T. J. O'Shea, T. Roy, and T. C. Clancy, "Over-the-Air Deep Learning
+    Based Radio Signal Classification," IEEE JSTSP, 2018.
+    DOI: https://doi.org/10.1109/JSTSP.2018.2797022
+
+Implementation:
+    Project PyTorch reproduction based on the paper architecture.
+
+Input: I/Q tensors with shape [N, 2, L].
+Output: Unnormalized class logits with shape [N, num_classes].
+Note: Residual convolutional stacks followed by a classification head.
 """
 
 from __future__ import annotations

@@ -3,6 +3,7 @@
 !/.gitignore
 !/README.md
 !/LICENSE
+!/assets/
 !/src/
 !/datasets/
 !/ref/
@@ -19,6 +20,29 @@
 /src/runs/
 /src/dataset_generator_matlab/runs/
 /src/result_plotting_matlab/figures/
+/src/result_plotting_matlab/feature_data/
+/src/result_plotting_matlab/figure_data/
+/src/group_members/
+/src/output/
+# Retain the earlier candidate locally, but publish the selected model only.
+/src/amc/models/ours_saftformer/condition_readout.py
+/src/amc/models/ours_saftformer/ablations.py
+/src/amc/models/local_models.py
+# Keep ablation experiments and their reporting artifacts local.
+/src/configs/ours_saftformer/ablation_*.json
+/src/configs/ours_saftformer/ablation_notes.md
+/assets/results/ablation.csv
+/src/tests/test_saftformer_ablations.py
+/src/result_plotting_matlab/plot_ablation_snr_gains.m
+/src/result_plotting_matlab/run_plot_ablation_snr_gains.m
+
+# Checkpoints and generated MATLAB data are distributed separately.
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.hdf5
+*.mat
 
 # Local editor and Python artifacts
 /src/.vscode/
